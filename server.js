@@ -2,10 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
-// Імпортуємо наші модулі
-// Зверни увагу: ми маємо експортувати testScraper з scraper.js
-// Тому в кінці scraper.js додай: module.exports = { testScraper };
-const { testScraper } = require('./scraper');
+const { getTwitterProfile } = require('./TwitterAPI');
 const { generateTokenStats } = require('./analyzer');
 
 const app = express();
