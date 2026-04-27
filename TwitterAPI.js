@@ -15,7 +15,7 @@ async function getTwitterProfile(handle) {
             resFormat: 'json'
         },
         headers: {
-            'x-rapidapi-key': process.env.RAPIDAPI_KEY.trim(),
+            'x-rapidapi-key': (process.env.RAPIDAPI_KEY || "").trim(),
             'x-rapidapi-host': 'twitter-api-v1-1-enterprise.p.rapidapi.com'
         }
     };
