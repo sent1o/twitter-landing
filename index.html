@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X-Token Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #060a12;
+            --glass: rgba(10, 17, 30, 0.62);
+            --glass-border: rgba(148, 163, 184, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg);
+            color: #e2e8f0;
+            font-family: "Space Grotesk", sans-serif;
+            overflow-x: hidden;
+        }
+
+        .metric-font {
+            font-family: "JetBrains Mono", monospace;
+        }
+
+        .glass {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 24px 80px rgba(2, 8, 20, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        }
+
+        .orb {
+            position: fixed;
+            border-radius: 9999px;
+            filter: blur(90px);
+            pointer-events: none;
+            z-index: 0;
+            transform-origin: center;
+            animation: float 16s ease-in-out infinite, pulse 9s ease-in-out infinite;
+            opacity: 0.58;
+        }
+
+        .orb-purple {
+            width: 38rem;
+            height: 38rem;
+            top: -12rem;
+            left: -10rem;
+            background: radial-gradient(circle, rgba(168, 85, 247, 0.92) 0%, rgba(168, 85, 247, 0) 72%);
+        }
+
+        .orb-cyan {
+            width: 34rem;
+            height: 34rem;
+            right: -8rem;
+            bottom: -11rem;
+            background: radial-gradient(circle, rgba(34, 211, 238, 0.9) 0%, rgba(34, 211, 238, 0) 72%);
+            animation-delay: -5s;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translate3d(0, 0, 0);
+            }
+
+            50% {
+                transform: translate3d(26px, -24px, 0);
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 0.44;
+                scale: 1;
+            }
+
+            50% {
+                opacity: 0.76;
+                scale: 1.16;
+            }
+        }
+
+        .scan-aura-track {
+            position: absolute;
+            left: 0.45rem;
+            right: 0.45rem;
+            top: 0.45rem;
+            bottom: 0.45rem;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .scan-aura-fill {
+            height: 100%;
+            width: 10%;
+            opacity: 0.14;
+            background: linear-gradient(90deg, rgba(74, 222, 128, 0.55), rgba(168, 85, 247, 0.58));
+            transition: width 220ms ease, background 220ms ease, opacity 220ms ease;
+            border-radius: 0.65rem;
+        }
+
+        .terminal-line {
+            opacity: 0;
+            transform: translateY(6px);
+            animation: in 250ms ease forwards;
+        }
+
+        @keyframes in {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 0.55rem;
+            border-radius: 9999px;
+            background: rgba(148, 163, 184, 0.22);
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 9999px;
+            transition: width 700ms cubic-bezier(0.22, 1, 0.36, 1);
+            background: linear-gradient(90deg, rgba(74, 222, 128, 0.9), rgba(168, 85, 247, 0.9));
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+    <div class="orb orb-purple"></div>
+    <div class="orb orb-cyan"></div>
+
+    <main
+        class="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-4 py-12 sm:px-8">
+        <section id="inputScreen" class="glass w-full max-w-3xl rounded-2xl p-6 sm:p-10">
+            <div class="mb-7">
+                <span
+                    class="inline-flex rounded-full border border-cyan-300/50 bg-cyan-400/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-cyan-200">
+                    v2.0 Protocol Live
+                </span>
+            </div>
+
+            <h1 class="text-4xl font-bold leading-tight text-slate-100 sm:text-6xl">
+                Tokenize Your
+                <span
+                    class="bg-gradient-to-r from-cyan-300 via-sky-300 to-fuchsia-400 bg-clip-text text-transparent">Timeline</span>
+            </h1>
+
+            <p class="mt-5 max-w-xl text-base text-slate-300/95 sm:text-lg">
+                Route your X presence through a synthetic on-chain valuation engine and get a roast-grade verdict.
+            </p>
+
+            <div class="mt-9">
+                <label for="handleInput"
+                    class="mb-3 block text-sm uppercase tracking-[0.14em] text-slate-300/90">Twitter Handle</label>
+                <div class="relative">
+                    <div class="scan-aura-track">
+                        <div id="auraFill" class="scan-aura-fill"></div>
+                    </div>
+                    <span
+                        class="pointer-events-none absolute left-4 top-1/2 z-20 -translate-y-1/2 text-slate-400/90">@</span>
+                    <input id="handleInput" type="text" spellcheck="false" autocomplete="off" autofocus
+                        placeholder="naval"
+                        class="relative z-10 h-14 w-full rounded-xl border border-slate-400/35 bg-slate-950/50 px-9 pr-4 text-lg text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/30">
+                </div>
+                <p id="errorText" class="mt-3 hidden text-sm font-medium text-rose-400"></p>
+            </div>
+
+            <div class="mt-8 flex flex-wrap items-center gap-3">
+                <button id="scanBtn" type="button"
+                    class="rounded-xl bg-gradient-to-r from-emerald-300 via-cyan-300 to-fuchsia-400 px-6 py-3 text-sm font-semibold uppercase tracking-[0.13em] text-slate-950 transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-cyan-300/60">
+                    Scan
+                </button>
+                <span class="metric-font text-xs uppercase tracking-[0.12em] text-slate-400">Enter = run analyzer</span>
+            </div>
+        </section>
+
+        <section id="loadingScreen" class="glass hidden w-full max-w-2xl rounded-2xl p-6 sm:p-10">
+            <div class="flex items-center gap-3">
+                <div class="h-6 w-6 animate-spin rounded-full border-2 border-cyan-200/30 border-t-cyan-300"></div>
+                <h2 class="text-2xl font-semibold text-slate-100 sm:text-3xl">Initializing Token Engine</h2>
+            </div>
+            <p id="loadingSubtitle" class="mt-3 text-slate-300/90">Preparing scan modules...</p>
+
+            <div class="mt-7 rounded-xl border border-emerald-300/30 bg-slate-950/70 p-4">
+                <div class="mb-3 flex items-center justify-between">
+                    <span
+                        class="metric-font text-xs uppercase tracking-[0.14em] text-emerald-300/90">terminal://pipeline</span>
+                    <span class="metric-font text-xs text-emerald-200/80">live</span>
+                </div>
+                <div id="terminalLines" class="metric-font space-y-2 text-sm text-emerald-200/90"></div>
+            </div>
+        </section>
+
+        <section id="result-section" class="glass hidden w-full max-w-6xl rounded-2xl p-5 sm:p-8">
+            <div
+                class="flex flex-col gap-4 border-b border-slate-500/35 pb-6 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex items-center gap-4">
+                    <img id="avatarImage" src="" crossorigin="anonymous" alt="Profile avatar"
+                        class="h-16 w-16 rounded-full border border-cyan-300/50 object-cover shadow-lg shadow-cyan-500/20">
+                    <div>
+                        <p id="nameText" class="text-2xl font-semibold text-slate-100">Unknown</p>
+                        <p id="handleText" class="text-sm text-slate-300/90">@handle</p>
+                    </div>
+                </div>
+                <div class="rounded-xl border border-fuchsia-300/40 bg-fuchsia-500/12 px-4 py-3">
+                    <p class="text-xs uppercase tracking-[0.14em] text-fuchsia-200/80">Ticker</p>
+                    <p id="tickerText" class="metric-font text-3xl font-bold text-fuchsia-200">$TOKEN</p>
+                </div>
+            </div>
+
+            <div class="mt-6 grid gap-4 lg:grid-cols-12">
+                <div class="rounded-xl border border-slate-500/30 bg-slate-950/45 p-4 lg:col-span-7">
+                    <p class="text-xs uppercase tracking-[0.14em] text-slate-400">Total Market Cap</p>
+                    <p id="marketCapText" class="metric-font mt-2 text-3xl font-bold text-cyan-200 sm:text-5xl">$0</p>
+                    <span id="changeBadge"
+                        class="metric-font mt-3 inline-flex rounded-full border px-3 py-1 text-sm font-semibold">+0.00%</span>
+
+                    <div class="mt-6 grid gap-3 sm:grid-cols-3">
+                        <div class="rounded-lg border border-slate-500/30 bg-slate-900/45 p-3">
+                            <p class="text-xs uppercase tracking-[0.12em] text-slate-400">FDV</p>
+                            <p id="fdvText" class="metric-font mt-1 text-lg font-semibold text-slate-100">$0</p>
+                        </div>
+                        <div class="rounded-lg border border-slate-500/30 bg-slate-900/45 p-3">
+                            <p class="text-xs uppercase tracking-[0.12em] text-slate-400">Vol</p>
+                            <p id="volText" class="metric-font mt-1 text-lg font-semibold text-slate-100">$0</p>
+                        </div>
+                        <div class="rounded-lg border border-slate-500/30 bg-slate-900/45 p-3">
+                            <p class="text-xs uppercase tracking-[0.12em] text-slate-400">Est. Holders</p>
+                            <p id="holdersText" class="metric-font mt-1 text-lg font-semibold text-slate-100">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-slate-500/30 bg-slate-950/45 p-4 lg:col-span-5">
+                    <p class="text-xs uppercase tracking-[0.14em] text-slate-400">Token Momentum</p>
+                    <div class="relative mt-4 h-[230px]">
+                        <p id="res-current-price"
+                            class="metric-font font-mono pointer-events-none absolute left-2 top-2 text-2xl font-bold text-cyan-400">
+                            $0.0000</p>
+                        <canvas id="tokenChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 grid gap-4 sm:grid-cols-3">
+                <div class="rounded-xl border border-slate-500/30 bg-slate-950/45 p-4">
+                    <p class="text-xs uppercase tracking-[0.14em] text-slate-400">Followers</p>
+                    <p id="followersText" class="metric-font mt-2 text-2xl font-semibold text-slate-100">0</p>
+                </div>
+                <div class="rounded-xl border border-slate-500/30 bg-slate-950/45 p-4">
+                    <p class="text-xs uppercase tracking-[0.14em] text-slate-400">Following</p>
+                    <p id="followingText" class="metric-font mt-2 text-2xl font-semibold text-slate-100">0</p>
+                </div>
+                <div class="rounded-xl border border-slate-500/30 bg-slate-950/45 p-4">
+                    <p class="text-xs uppercase tracking-[0.14em] text-slate-400">Rug Risk</p>
+                    <span id="rugRiskBadge"
+                        class="metric-font mt-2 inline-flex rounded-full border px-3 py-1.5 text-sm font-semibold">Unknown</span>
+                </div>
+            </div>
+
+            <div class="mt-4 grid gap-4 lg:grid-cols-2">
+                <div class="rounded-xl border border-fuchsia-400/40 bg-slate-950/45 p-4">
+                    <p class="text-xs uppercase tracking-[0.14em] text-fuchsia-200/90">AI Terminal Verdict</p>
+                    <blockquote id="verdictText"
+                        class="mt-3 border-l-4 border-fuchsia-400 pl-4 text-base italic text-slate-200/95">
+                        Awaiting roast...
+                    </blockquote>
+                </div>
+
+                <div class="rounded-xl border border-slate-500/30 bg-slate-950/45 p-4">
+                    <p class="text-xs uppercase tracking-[0.14em] text-cyan-200/90">On-Chain Analytics</p>
+                    <div class="mt-4 space-y-4">
+                        <div>
+                            <div class="mb-1 flex items-center justify-between text-sm">
+                                <span class="text-slate-300">Cult Strength</span>
+                                <span id="cultLabel" class="metric-font text-cyan-200">0%</span>
+                            </div>
+                            <div class="progress-track">
+                                <div id="cultBar" class="progress-fill"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="mb-1 flex items-center justify-between text-sm">
+                                <span class="text-slate-300">Founder Aura</span>
+                                <span id="auraLabel" class="metric-font text-cyan-200">0%</span>
+                            </div>
+                            <div class="progress-track">
+                                <div id="auraBar" class="progress-fill"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="mb-1 flex items-center justify-between text-sm">
+                                <span class="text-slate-300">Hype Momentum</span>
+                                <span id="hypeLabel" class="metric-font text-cyan-200">0%</span>
+                            </div>
+                            <div class="progress-track">
+                                <div id="hypeBar" class="progress-fill"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex flex-wrap gap-3 border-t border-slate-500/30 pt-6">
+                <button id="tweetBtn" type="button"
+                    class="rounded-xl bg-gradient-to-r from-emerald-300 via-cyan-300 to-fuchsia-400 px-6 py-3 text-sm font-semibold uppercase tracking-[0.13em] text-slate-950 transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-cyan-300/60">
+                    Post to Timeline
+                </button>
+                <button id="downloadBtn" type="button"
+                    class="rounded-xl border border-cyan-300/35 bg-cyan-500/10 px-6 py-3 text-sm font-semibold uppercase tracking-[0.13em] text-cyan-100 transition hover:bg-cyan-500/20 focus:outline-none focus:ring-2 focus:ring-cyan-300/50">
+                    Download CV
+                </button>
+                <button id="scanAgainBtn" type="button"
+                    class="rounded-xl border border-slate-300/35 bg-slate-900/50 px-6 py-3 text-sm font-semibold uppercase tracking-[0.13em] text-slate-100 transition hover:bg-slate-800/70 focus:outline-none focus:ring-2 focus:ring-slate-300/50">
+                    Scan Another
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const userCache = {};
+        const inputScreen = document.getElementById("inputScreen");
+        const loadingScreen = document.getElementById("loadingScreen");
+        const resultSection = document.getElementById("result-section");
+        const handleInput = document.getElementById("handleInput");
+        const scanBtn = document.getElementById("scanBtn");
+        const errorText = document.getElementById("errorText");
+        const auraFill = document.getElementById("auraFill");
+        const terminalLines = document.getElementById("terminalLines");
+        const loadingSubtitle = document.getElementById("loadingSubtitle");
+
+        const avatarImage = document.getElementById("avatarImage");
+        const nameText = document.getElementById("nameText");
+        const handleText = document.getElementById("handleText");
+        const tickerText = document.getElementById("tickerText");
+        const marketCapText = document.getElementById("marketCapText");
+        const changeBadge = document.getElementById("changeBadge");
+        const fdvText = document.getElementById("fdvText");
+        const volText = document.getElementById("volText");
+        const holdersText = document.getElementById("holdersText");
+        const followersText = document.getElementById("followersText");
+        const followingText = document.getElementById("followingText");
+        const rugRiskBadge = document.getElementById("rugRiskBadge");
+        const verdictText = document.getElementById("verdictText");
+        const cultLabel = document.getElementById("cultLabel");
+        const auraLabel = document.getElementById("auraLabel");
+        const hypeLabel = document.getElementById("hypeLabel");
+        const cultBar = document.getElementById("cultBar");
+        const auraBar = document.getElementById("auraBar");
+        const hypeBar = document.getElementById("hypeBar");
+        const tweetBtn = document.getElementById("tweetBtn");
+        const downloadBtn = document.getElementById("downloadBtn");
+        const scanAgainBtn = document.getElementById("scanAgainBtn");
+        const currentPriceText = document.getElementById("res-current-price");
+
+        const compactFormatter = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 2 });
+        const integerFormatter = new Intl.NumberFormat("en-US");
+        const LOADING_STEPS = [
+            "[WAIT] Scraping social graph",
+            "[WAIT] Calculating liquidity",
+            "[WAIT] Generating AI roast"
+        ];
+
+        let latestPayload = null;
+        let chart = null;
+
+        function showState(target) {
+            inputScreen.classList.toggle("hidden", target !== "input");
+            loadingScreen.classList.toggle("hidden", target !== "loading");
+            resultSection.classList.toggle("hidden", target !== "result");
+        }
+
+        function sanitizeHandle(raw) {
+            return raw.trim().replace(/^@+/, "").replace(/[^a-zA-Z0-9_]/g, "");
+        }
+
+        function showError(message) {
+            errorText.textContent = message;
+            errorText.classList.remove("hidden");
+        }
+
+        function clearError() {
+            errorText.textContent = "";
+            errorText.classList.add("hidden");
+        }
+
+        function parseNumberish(value) {
+            if (typeof value === "number" && Number.isFinite(value)) {
+                return value;
+            }
+            if (typeof value === "string") {
+                const parsed = Number(value.replace(/[^0-9.-]/g, ""));
+                if (Number.isFinite(parsed)) {
+                    return parsed;
+                }
+            }
+            return 0;
+        }
+
+        function hashHandle(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i += 1) {
+                hash = (hash << 5) - hash + str.charCodeAt(i);
+                hash |= 0;
+            }
+            return Math.abs(hash);
+        }
+
+        function seeded(seed, salt) {
+            const raw = Math.sin((seed + salt) * 12.9898) * 43758.5453;
+            return raw - Math.floor(raw);
+        }
+
+        function seededInt(seed, salt, min, max) {
+            return Math.round(min + seeded(seed, salt) * (max - min));
+        }
+
+        function seededFloat(seed, salt, min, max, precision) {
+            return Number((min + seeded(seed, salt) * (max - min)).toFixed(precision));
+        }
+
+        function formatUsd(value) {
+            if (value >= 1000000) {
+                return "$" + compactFormatter.format(value);
+            }
+            return "$" + integerFormatter.format(Math.round(value));
+        }
+
+        function pulseInputAura() {
+            const width = Math.max(16, Math.min(98, seededInt(Date.now(), Math.random() * 1000, 18, 98)));
+            const green = seededInt(Date.now(), Math.random() * 1400, 115, 160);
+            const purple = seededInt(Date.now(), Math.random() * 1700, 260, 305);
+            auraFill.style.opacity = handleInput.value.trim() ? "0.96" : "0.14";
+            auraFill.style.width = width + "%";
+            auraFill.style.background = "linear-gradient(90deg, hsla(" + green + ", 90%, 56%, 0.6), hsla(" + purple + ", 88%, 60%, 0.58))";
+        }
+
+        function resetAura() {
+            auraFill.style.width = "10%";
+            auraFill.style.opacity = "0.14";
+            auraFill.style.background = "linear-gradient(90deg, rgba(74, 222, 128, 0.55), rgba(168, 85, 247, 0.58))";
+        }
+
+        function delay(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+        }
+
+        async function runLoadingSequence() {
+            terminalLines.innerHTML = "";
+            for (let i = 0; i < LOADING_STEPS.length; i += 1) {
+                await delay(680);
+                const line = document.createElement("p");
+                line.className = "terminal-line";
+                line.textContent = LOADING_STEPS[i];
+                terminalLines.appendChild(line);
+            }
+        }
+
+        function getJoinedYear(joined, seed) {
+            if (typeof joined === "number" && joined > 2005 && joined < 2100) {
+                return joined;
+            }
+            if (typeof joined === "string") {
+                const yearMatch = joined.match(/\b(20\d{2}|19\d{2})\b/);
+                if (yearMatch) {
+                    return Number(yearMatch[1]);
+                }
+                const parsedDate = new Date(joined);
+                if (!Number.isNaN(parsedDate.getTime())) {
+                    return parsedDate.getFullYear();
+                }
+            }
+            return seededInt(seed, 99, 2008, 2024);
+        }
+
+        function buildVerdict(baseVerdict) {
+            return (baseVerdict || "Narrative strong, fundamentals chaotic.").toString().trim();
+        }
+
+        function buildGeneratedStats(seed, marketCap) {
+            const change24h = seededFloat(seed, 5, -22.8, 27.6, 2);
+            const cult = seededInt(seed, 11, 35, 99);
+            const aura = seededInt(seed, 13, 30, 98);
+            const hype = seededInt(seed, 17, 32, 99);
+            const holders = seededInt(seed, 19, 1200, 1900000);
+            const fdv = Math.round(marketCap * seededFloat(seed, 23, 1.12, 2.85, 3));
+            const vol = Math.round(marketCap * seededFloat(seed, 29, 0.08, 0.44, 3));
+
+            const points = [];
+            let cursor = seededFloat(seed, 31, 42, 126, 2);
+            for (let i = 0; i < 12; i += 1) {
+                const drift = seededFloat(seed, 40 + i, -12, 12, 2);
+                const trend = change24h >= 0 ? i * seededFloat(seed, 55, 0.5, 2.4, 2) : -i * seededFloat(seed, 57, 0.4, 1.8, 2);
+                cursor = Math.max(12, cursor + drift + trend * 0.14);
+                points.push(Number(cursor.toFixed(2)));
+            }
+
+            return { change24h, cult, aura, hype, holders, fdv, vol, chart: points };
+        }
+
+        function setChangeBadge(change) {
+            const positive = change >= 0;
+            changeBadge.className = positive
+                ? "metric-font mt-3 inline-flex rounded-full border border-emerald-300/40 bg-emerald-500/20 px-3 py-1 text-sm font-semibold text-emerald-200"
+                : "metric-font mt-3 inline-flex rounded-full border border-rose-300/40 bg-rose-500/20 px-3 py-1 text-sm font-semibold text-rose-200";
+            changeBadge.textContent = (positive ? "+" : "") + change.toFixed(2) + "% (24h)";
+        }
+
+        function setRugRiskBadge(rawRisk) {
+            const value = (rawRisk || "Unknown").toString();
+            const safe = /safe/i.test(value);
+            if (safe) {
+                rugRiskBadge.className = "metric-font mt-2 inline-flex rounded-full border border-emerald-300/45 bg-emerald-500/20 px-3 py-1.5 text-sm font-semibold text-emerald-200";
+            } else {
+                rugRiskBadge.className = "metric-font mt-2 inline-flex rounded-full border border-rose-300/45 bg-rose-500/20 px-3 py-1.5 text-sm font-semibold text-rose-200";
+            }
+            rugRiskBadge.textContent = value;
+        }
+
+        function setProgress(barEl, labelEl, value) {
+            barEl.style.width = value + "%";
+            labelEl.textContent = value + "%";
+        }
+
+        function generateChartDataPoints(hash, isPositive) {
+            const dataPoints = [];
+            let cursor = seededFloat(hash, 31, 42, 126, 2);
+            for (let i = 0; i < 12; i += 1) {
+                const drift = seededFloat(hash, 40 + i, -12, 12, 2);
+                const trend = isPositive ? i * seededFloat(hash, 55, 0.5, 2.4, 2) : -i * seededFloat(hash, 57, 0.4, 1.8, 2);
+                cursor = Math.max(12, cursor + drift + trend * 0.14);
+                dataPoints.push(Number(cursor.toFixed(2)));
+            }
+            return dataPoints;
+        }
+
+        function drawChart(isPositive, hash, basePrice) {
+            const startPrice = parseFloat(basePrice) || 0.0001;
+
+            // Генеруємо точки графіка навколо стартової ціни
+            const dataPoints = [];
+            let current = startPrice;
+
+            for (let i = 0; i < 12; i++) {
+                let volatility = current * 0.15; // 15% волатильності
+
+                // ВБИЛИ Math.random(). Юзаємо псевдорандом на основі хешу!
+                // Math.sin дасть стабільне число від 0 до 1 для кожного кроку графіка
+                let pseudoRandom = Math.abs(Math.sin(hash * (i + 1)));
+                let change = (pseudoRandom * volatility * 2) - volatility;
+
+                // Додаємо тренд
+                if (isPositive) change += (volatility * 0.3);
+                else change -= (volatility * 0.3);
+
+                current += change;
+                if (current < 0) current = startPrice * 0.01;
+                dataPoints.push(current);
+            }
+
+            const lastPoint = dataPoints[dataPoints.length - 1];
+
+            // Форматуємо вивід ціни 
+            const smartPriceFormatter = new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: lastPoint < 0.01 ? 8 : 4,
+                maximumFractionDigits: lastPoint < 0.01 ? 8 : 4
+            });
+            currentPriceText.textContent = smartPriceFormatter.format(lastPoint);
+
+            const canvas = document.getElementById("tokenChart");
+            const color = isPositive ? "rgba(74, 222, 128, 0.95)" : "rgba(248, 113, 113, 0.95)";
+            const fill = isPositive ? "rgba(74, 222, 128, 0.16)" : "rgba(248, 113, 113, 0.16)";
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            chart = new Chart(canvas, {
+                type: "line",
+                data: {
+                    labels: ["M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M10", "M11", "M12"],
+                    datasets: [
+                        {
+                            data: dataPoints,
+                            borderColor: color,
+                            backgroundColor: fill,
+                            fill: true,
+                            borderWidth: 2.2,
+                            pointRadius: 0,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    },
+                    scales: {
+                        x: {
+                            display: false,
+                            grid: { display: false }
+                        },
+                        y: {
+                            display: true,
+                            position: "right",
+                            grid: { display: false },
+                            border: { display: false },
+                            ticks: {
+                                display: true,
+                                color: "rgba(148, 163, 184, 0.9)",
+                                font: {
+                                    family: "JetBrains Mono",
+                                    size: 10
+                                },
+                                callback: function (value) {
+                                    if (value === 0) return '$0.0000';
+                                    if (value < 0.01) return '$' + value.toFixed(8);
+                                    return '$' + value.toFixed(4);
+                                }
+                            }
+                        }
+                    }
+                } // Закрили options
+            }); // Закрили new Chart
+        }
+
+        async function downloadScreenshot() {
+            if (resultSection.classList.contains("hidden")) {
+                return;
+            }
+            const canvas = await html2canvas(resultSection, {
+                backgroundColor: "#060a12",
+                scale: 2,
+                useCORS: true
+            });
+            const link = document.createElement("a");
+            link.href = canvas.toDataURL("image/png");
+            link.download = "twitter-token.png";
+            link.click();
+        }
+
+        function shareOnX() {
+            if (!latestPayload) {
+                return;
+            }
+            const shareText = "AI Analyst just rated my X account to memecoin " + latestPayload.ticker + " with a $" + integerFormatter.format(Math.round(latestPayload.marketCap)) + " Market Cap.\n\n\"" + "\"\n\nBuilt by @parcifap \nScan your worth here: [YOUR_WEBSITE_LINK]";
+            const intent = "https://twitter.com/intent/tweet?text=" + encodeURIComponent(shareText);
+            window.open(intent, "_blank", "noopener,noreferrer");
+        }
+
+        async function fetchProfile(handle) {
+            const cleanHandle = handle.toLowerCase();
+
+            // 1. Шукаємо в жорсткій пам'яті браузера
+            const cachedData = localStorage.getItem('user_' + cleanHandle);
+            if (cachedData) {
+                console.log("⚡ Беремо з жорсткого кешу:", cleanHandle);
+                return JSON.parse(cachedData);
+            }
+
+            // 2. Якщо нема — йдемо на сервер
+            const response = await fetch("/api/analyze/" + encodeURIComponent(handle));
+            if (!response.ok) {
+                throw new Error("API returned status " + response.status);
+            }
+
+            const data = await response.json();
+
+            // 3. Зберігаємо в жорстку пам'ять
+            localStorage.setItem('user_' + cleanHandle, JSON.stringify(data));
+
+            return data;
+        }
+
+        function renderDashboard(handle, data) {
+            const seed = hashHandle(handle.toLowerCase());
+            const parsedMarketCap = parseNumberish(data.marketCap);
+            const marketCap = parsedMarketCap > 0 ? parsedMarketCap : seededInt(seed, 3, 600000, 1300000000);
+            const followers = data.followers !== undefined ? parseNumberish(data.followers) : seededInt(seed, 7, 450, 2800000);
+            const following = data.following !== undefined ? parseNumberish(data.following) : seededInt(seed, 9, 45, 4800);
+            const stats = buildGeneratedStats(seed, marketCap);
+            const joinedYear = getJoinedYear(data.joined, seed);
+            const name = (data.name || handle).toString();
+            const avatar = (data.avatarUrl || ("https://unavatar.io/x/" + handle)).toString();
+            const tickerCore = (data.ticker || handle.slice(0, 6) || "XTKN").toString().toUpperCase().replace(/[^A-Z0-9]/g, "");
+            const ticker = "$" + (tickerCore || "XTKN");
+            const finalVerdict = buildVerdict(data.verdict); // Прибрали joinedYear звідси
+            avatarImage.src = avatar;
+            avatarImage.alt = name + " avatar";
+            nameText.textContent = name;
+            handleText.textContent = "@" + handle;
+            tickerText.textContent = ticker;
+            marketCapText.textContent = "$" + integerFormatter.format(Math.round(marketCap));
+            fdvText.textContent = formatUsd(stats.fdv);
+            volText.textContent = formatUsd(stats.vol);
+            const finalHolders = data.holders !== undefined ? data.holders : stats.holders;
+            holdersText.textContent = compactFormatter.format(finalHolders);
+            if (data.followers !== undefined) {
+                followersText.textContent = data.followers; // Просто виводимо "25.8K" як прийшло
+            } else {
+                followersText.textContent = compactFormatter.format(followers); // Тільки для фейкових даних
+            } followingText.textContent = compactFormatter.format(following);
+            verdictText.textContent = finalVerdict;
+
+            setChangeBadge(stats.change24h);
+            setRugRiskBadge(data.rugRisk);
+            setProgress(cultBar, cultLabel, stats.cult);
+            setProgress(auraBar, auraLabel, stats.aura);
+            setProgress(hypeBar, hypeLabel, stats.hype);
+            drawChart(stats.change24h >= 0, seed, data.basePrice);
+            latestPayload = {
+                handle,
+                ticker,
+                marketCap,
+                change24h: stats.change24h,
+                basePrice: data.basePrice,
+                verdict: finalVerdict
+            };
+        }
+
+        async function startScan() {
+            const handle = sanitizeHandle(handleInput.value);
+            if (!handle) {
+                showError("Enter a valid handle before scanning.");
+                return;
+            }
+
+            clearError();
+            loadingSubtitle.textContent = "Deploying scan workers for @" + handle + "...";
+            showState("loading");
+
+            const loadingFlow = runLoadingSequence();
+            try {
+                const data = await fetchProfile(handle);
+                await loadingFlow;
+                renderDashboard(handle, data);
+                showState("result");
+            } catch (error) {
+                await loadingFlow;
+                showState("input");
+                showError("Analyzer API failed at http:///api/analyze/" + handle + ". Check service availability and retry.");
+            }
+        }
+
+        scanBtn.addEventListener("click", startScan);
+
+        handleInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                startScan();
+            }
+        });
+
+        handleInput.addEventListener("input", () => {
+            clearError();
+            if (handleInput.value.trim()) {
+                pulseInputAura();
+            } else {
+                resetAura();
+            }
+        });
+
+        tweetBtn.addEventListener("click", shareOnX);
+        downloadBtn.addEventListener("click", downloadScreenshot);
+
+        scanAgainBtn.addEventListener("click", () => {
+            window.location.reload();
+        });
+
+        resetAura();
+    </script>
+</body>
+
+</html>
