@@ -1,6 +1,11 @@
 const axios = require('axios'); // Оцей рядок ти випадково видалив )
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
+const formatNumber = (num) => {
+    if (!num) return "0";
+    // Перетворить 239527529 на 239.53M, а 1320 на 1.32K
+    return Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(num);
+};
 
 console.log("TEST ENV:", process.env.RAPIDAPI_KEY ? "Ключ на місці!" : "UNDEFINED ❌");
 
@@ -35,8 +40,8 @@ async function getTwitterProfile(handle) {
             name: legacy.name,
             handle: legacy.screen_name,
             bio: legacy.description,
-            followers: (legacy.followers_count || 0).toString(),
-            following: (legacy.friends_count || 0).toString(),
+            followers: formatNumber(legacy.followers_count),
+            following: formatNumber(legacy.friends_count),
             joined: legacy.created_at,
             avatar: legacy.profile_image_url_https ? legacy.profile_image_url_https.replace('_normal', '_400x400') : null
         };
